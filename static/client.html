@@ -7,25 +7,37 @@
 <title>Thunomètre</title>
 <link rel="stylesheet" href="/static/style.css">
 <script src="/static/chart.js"></script>
+<script src="/static/calc.js"></script>
 </head>
 <body>
 <main>
   <h1>Thunomètre</h1>
-  <p class="sub">Saisissez vos deux scores (de 0 à 100) pour voir où vous vous situez par rapport aux autres personnes. Les autres points sont anonymes.</p>
+  <p class="sub">Indique tes deux scores pour voir où tu te situes par rapport aux autres personnes. Les autres points sont anonymes.</p>
 
-  <div class="card">
+  <div class="card" id="scores">
     <form class="row" id="form">
-      <label>Score de revenus <input type="number" id="income" min="0" max="100" step="1" required></label>
-      <label>Score de privilège <input type="number" id="privilege" min="0" max="100" step="1" required></label>
+      <label>Capacités financières <input type="number" id="income" step="1" required></label>
+      <label>Privilège <input type="number" id="privilege" step="1" required></label>
       <button type="submit" id="submit">Enregistrer</button>
     </form>
     <p class="msg" id="msg"></p>
   </div>
 
+  <h2>Calculer mes scores</h2>
+  <p class="muted">Tes réponses ne quittent pas ton navigateur et ne sont jamais enregistrées. Seuls les deux scores le sont, quand tu cliques sur « Enregistrer ».</p>
+  <details class="card">
+    <summary>Score de privilège</summary>
+    <div id="calc-privilege"></div>
+  </details>
+  <details class="card">
+    <summary>Score de capacités financières</summary>
+    <div id="calc-finance"></div>
+  </details>
+
   <h2>Le nuage</h2>
   <div class="card">
     <div id="chart"></div>
-    <div class="legend"><span class="me">Vous</span><span>Les autres</span></div>
+    <div class="legend"><span class="me">Toi</span><span>Les autres</span></div>
   </div>
 </main>
 <script>
@@ -33,15 +45,30 @@ const id = location.pathname.split("/").pop();
 const $ = s => document.getElementById(s);
 let data;
 
+function say(text, err) {
+  $("msg").textContent = text;
+  $("msg").className = err ? "msg err" : "msg";
+}
+
 function render() {
   const pts = data.others.map(o => ({ x: o.income, y: o.privilege }));
-  if (data.me.income != null) pts.push({ x: data.me.income, y: data.me.privilege, me: true, label: "Vous" });
+  if (data.me.income != null) pts.push({ x: data.me.income, y: data.me.privilege, me: true, label: "Toi" });
   drawScatter($("chart"), pts);
 }
 
+function useScore(input) {
+  return score => {
+    $(input).value = score;
+    say("Score reporté. Clique sur « Enregistrer » pour le garder.");
+    $("scores").scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+}
+buildPrivilegeCalc($("calc-privilege"), useScore("privilege"));
+buildFinanceCalc($("calc-finance"), useScore("income"));
+
 async function load() {
   const r = await fetch("/api/p/" + id);
-  if (!r.ok) { $("msg").textContent = "Lien invalide."; $("msg").className = "msg err"; return; }
+  if (!r.ok) return say("Lien invalide.", true);
   data = await r.json();
   if (data.me.income != null) {
     $("income").value = data.me.income;
@@ -58,10 +85,9 @@ $("form").addEventListener("submit", async e => {
     method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
   });
   const res = await r.json();
-  if (!r.ok) { $("msg").textContent = res.error; $("msg").className = "msg err"; return; }
+  if (!r.ok) return say(res.error, true);
   data.me = res;
-  $("msg").textContent = "Enregistré.";
-  $("msg").className = "msg";
+  say("Enregistré.");
   $("submit").textContent = "Modifier";
   render();
 });

@@ -15,7 +15,7 @@
 
   <div class="card">
     <form class="row" id="form">
-      <label style="flex:1">Adresse mail <input type="email" id="email" required></label>
+      <label style="flex:1">Nom <input type="text" id="name" maxlength="200" required placeholder="Nom, mail, numéro + date…"></label>
       <button type="submit">Créer le lien</button>
     </form>
     <p class="msg" id="msg"></p>
@@ -27,7 +27,7 @@
   <h2>Personnes</h2>
   <div class="card table-wrap">
     <table>
-      <thead><tr><th>Mail</th><th>Revenus</th><th>Privilège</th><th></th></tr></thead>
+      <thead><tr><th>Nom</th><th>Finances</th><th>Privilège</th><th></th></tr></thead>
       <tbody id="rows"></tbody>
     </table>
   </div>
@@ -44,7 +44,7 @@ function highlight(uuid) {
 function render() {
   const scored = people.filter(p => p.income != null);
   drawScatter($("chart"),
-    scored.map(p => ({ x: p.income, y: p.privilege, label: p.email, uuid: p.uuid })),
+    scored.map(p => ({ x: p.income, y: p.privilege, label: p.name, uuid: p.uuid })),
     p => highlight(p && p.uuid));
 
   const tbody = $("rows");
@@ -59,7 +59,7 @@ function render() {
       tr.appendChild(td);
       return td;
     };
-    cell(p.email);
+    cell(p.name);
     cell(p.income ?? "—", p.income == null ? "num empty" : "num");
     cell(p.privilege ?? "—", p.privilege == null ? "num empty" : "num");
     const actions = cell("");
@@ -75,7 +75,7 @@ function render() {
     del.className = "link danger";
     del.textContent = "Supprimer";
     del.onclick = async () => {
-      if (!confirm("Supprimer " + p.email + " ?")) return;
+      if (!confirm("Supprimer " + p.name + " ?")) return;
       await fetch("/api/admin/points/" + p.uuid, { method: "DELETE" });
       load();
     };
@@ -90,7 +90,7 @@ function render() {
 function highlightDot(target) {
   const scored = people.filter(p => p.income != null);
   drawScatter($("chart"),
-    scored.map(p => ({ x: p.income, y: p.privilege, label: p.email, uuid: p.uuid, me: target && p.uuid === target.uuid })),
+    scored.map(p => ({ x: p.income, y: p.privilege, label: p.name, uuid: p.uuid, me: target && p.uuid === target.uuid })),
     p => highlight(p && p.uuid));
 }
 
@@ -105,17 +105,17 @@ $("form").addEventListener("submit", async e => {
   e.preventDefault();
   const r = await fetch("/api/admin/points", {
     method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email: $("email").value }),
+    body: JSON.stringify({ name: $("name").value }),
   });
   const res = await r.json();
   if (!r.ok) { $("msg").textContent = res.error; $("msg").className = "msg err"; return; }
-  $("email").value = "";
+  $("name").value = "";
   $("msg").className = "msg";
   $("msg").innerHTML = "";
   const a = document.createElement("a");
   a.href = link(res);
   a.textContent = link(res);
-  $("msg").append("Lien créé pour " + res.email + " : ", a);
+  $("msg").append("Lien créé pour " + res.name + " : ", a);
   load();
 });
 

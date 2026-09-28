@@ -22,7 +22,7 @@ DB_PATH = os.environ.get("DB_PATH", str(ROOT / "thunometre.db"))
 ADMIN_USER = os.environ.get("ADMIN_USER", "")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 UUID_RE = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
-EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+MAX_SCORE = 1000
 
 
 def db():
@@ -33,18 +33,25 @@ def db():
 
 def init_db():
     with db() as conn:
+        cols = [r["name"] for r in conn.execute("PRAGMA table_info(points)")]
+        if "email" in cols:
+            # Ancien schéma (email, scores bornés 0–100) : on migre.
+            conn.execute("ALTER TABLE points RENAME TO points_old")
         conn.execute(
             """CREATE TABLE IF NOT EXISTS points (
                 uuid      TEXT PRIMARY KEY,
-                email     TEXT NOT NULL,
-                privilege INTEGER CHECK (privilege BETWEEN 0 AND 100),
-                income    INTEGER CHECK (income BETWEEN 0 AND 100)
+                name      TEXT NOT NULL,
+                privilege INTEGER,
+                income    INTEGER
             )"""
         )
+        if "email" in cols:
+            conn.execute("INSERT INTO points SELECT uuid, email, privilege, income FROM points_old")
+            conn.execute("DROP TABLE points_old")
 
 
 def valid_score(v):
-    return isinstance(v, int) and not isinstance(v, bool) and 0 <= v <= 100
+    return isinstance(v, int) and not isinstance(v, bool) and -MAX_SCORE <= v <= MAX_SCORE
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -148,20 +155,20 @@ class Handler(BaseHTTPRequestHandler):
         if not self.require_admin():
             return
         with db() as conn:
-            rows = conn.execute("SELECT * FROM points ORDER BY email").fetchall()
+            rows = conn.execute("SELECT * FROM points ORDER BY name").fetchall()
         self.send(200, [dict(r) for r in rows])
 
     def admin_create(self):
         if not self.require_admin():
             return
         data = self.json_body() or {}
-        email = str(data.get("email", "")).strip()
-        if not EMAIL_RE.match(email):
-            return self.send(400, {"error": "Adresse mail invalide."})
+        name = str(data.get("name", "")).strip()
+        if not name or len(name) > 200:
+            return self.send(400, {"error": "Nom requis (200 caractères max)."})
         pid = str(uuid.uuid4())
         with db() as conn:
-            conn.execute("INSERT INTO points (uuid, email) VALUES (?, ?)", (pid, email))
-        self.send(201, {"uuid": pid, "email": email, "privilege": None, "income": None})
+            conn.execute("INSERT INTO points (uuid, name) VALUES (?, ?)", (pid, name))
+        self.send(201, {"uuid": pid, "name": name, "privilege": None, "income": None})
 
     def admin_delete(self, pid):
         if not self.require_admin():
@@ -187,7 +194,7 @@ class Handler(BaseHTTPRequestHandler):
         data = self.json_body() or {}
         p, i = data.get("privilege"), data.get("income")
         if not (valid_score(p) and valid_score(i)):
-            return self.send(400, {"error": "Les scores doivent être des entiers entre 0 et 100."})
+            return self.send(400, {"error": f"Les scores doivent être des entiers entre {-MAX_SCORE} et {MAX_SCORE}."})
         with db() as conn:
             cur = conn.execute(
                 "UPDATE points SET privilege=?, income=? WHERE uuid=?", (p, i, pid)
@@ -203,7 +210,7 @@ class Handler(BaseHTTPRequestHandler):
 
 ROUTES = [
     ("GET", r"/", Handler.home),
-    ("GET", r"/static/(style\.css|chart\.js)", Handler.asset),
+    ("GET", r"/static/(style\.css|chart\.js|calc\.js)", Handler.asset),
     ("GET", r"/admin", Handler.admin_page),
     ("GET", rf"/p/({UUID_RE})", Handler.client_page),
     ("GET", r"/api/admin/points", Handler.admin_list),

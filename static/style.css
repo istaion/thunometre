@@ -103,3 +103,27 @@ th { color: var(--ink-2); font-weight: 500; }
 td.num { font-variant-numeric: tabular-nums; }
 td.empty { color: var(--ink-3); }
 tr.hl td { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+
+.muted { color: var(--ink-2); font-size: .875rem; }
+button:disabled { opacity: .4; cursor: default; }
+.chart .grid.zero { stroke: var(--ink-3); }
+
+/* Calculateurs */
+details.card { margin-bottom: 12px; padding: 0; }
+details.card > summary { cursor: pointer; padding: 14px 16px; font-weight: 600; }
+details.card > div { padding: 0 16px 16px; }
+details.card > div > p.muted { margin-top: 0; }
+form.calc fieldset { border: 0; border-top: 1px solid var(--line); margin: 0; padding: 12px 0; }
+form.calc legend { font-weight: 600; padding: 0; float: left; width: 100%; margin-bottom: 6px; }
+form.calc .opt { flex-direction: row; align-items: baseline; gap: 8px; color: var(--ink); font-size: .9375rem; padding: 3px 0; cursor: pointer; clear: both; }
+form.calc .opt input { flex: none; }
+form.calc .pts { flex: none; width: 2.2em; text-align: right; font-variant-numeric: tabular-nums; color: var(--ink-2); font-weight: 600; }
+form.calc .amount { display: flex; align-items: center; gap: 8px; clear: both; }
+form.calc .amount input { width: 9em; }
+form.calc .amount .pts { margin-left: auto; }
+form.calc .rule { color: var(--ink-3); font-size: .8125rem; margin: 6px 0 0; }
+.calc-total {
+  display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;
+  border-top: 1px solid var(--line); padding-top: 12px;
+}
+.calc-total strong { font-size: 1.25rem; font-variant-numeric: tabular-nums; }

@@ -1,16 +1,21 @@
 # thunometre
 
-Site ultraléger pour situer son « thunomètre » (score de revenus et score de
-privilège, de 0 à 100) sur un nuage de points, par rapport aux autres personnes.
+Site ultraléger pour situer son « thunomètre » (score de capacités financières et
+score de privilège, entiers éventuellement négatifs) sur un nuage de points, par
+rapport aux autres personnes.
 
-- **Admin** (`/admin`, protégé par mot de passe) : saisit une adresse mail, ce qui
-  crée un lien personnel `/p/<uuid>` à envoyer. Voit le nuage avec le mail de
-  chaque point au survol, et la liste des personnes (copier le lien, supprimer).
+- **Admin** (`/admin`, protégé par identifiant et mot de passe) : saisit un nom
+  libre (mail, prénom, numéro + date…), ce qui crée un lien personnel `/p/<uuid>`
+  à envoyer. Voit le nuage avec le nom de chaque point au survol, et la liste des
+  personnes (copier le lien, supprimer).
 - **Client** (`/p/<uuid>`) : saisit ou modifie ses deux scores, et voit le nuage
-  avec son point en couleur. Les autres points sont anonymes.
+  avec son point en couleur. Les autres points sont anonymes. Deux calculateurs
+  (privilège, capacités financières) aident à obtenir les scores ; ils tournent
+  entièrement dans le navigateur (`static/calc.js`, qui contient aussi les règles
+  de calcul) : les réponses ne sont ni envoyées ni stockées.
 
 Aucune dépendance : Python 3 (bibliothèque standard) + SQLite. Une seule table
-`points (uuid, email, privilege, income)`.
+`points (uuid, name, privilege, income)`.
 
 ## Lancer
 
