@@ -31,6 +31,18 @@
       <tbody id="rows"></tbody>
     </table>
   </div>
+
+  <h2>Données</h2>
+  <div class="card">
+    <div class="row-actions">
+      <a class="button" href="/api/admin/export.csv">Télécharger en CSV</a>
+      <label class="button secondary">Importer un CSV
+        <input type="file" id="import" accept=".csv,text/csv" hidden>
+      </label>
+    </div>
+    <p class="muted">Colonnes : <code>uuid, name, privilege, income</code>. À l'import, les lignes dont l'uuid existe déjà sont ignorées (rien n'est écrasé). Si une ligne est invalide, rien n'est importé.</p>
+    <p class="msg" id="import-msg"></p>
+  </div>
 </main>
 <script>
 const $ = s => document.getElementById(s);
@@ -117,6 +129,22 @@ $("form").addEventListener("submit", async e => {
   a.textContent = link(res);
   $("msg").append("Lien créé pour " + res.name + " : ", a);
   load();
+});
+
+$("import").addEventListener("change", async e => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if (!file) return;
+  const msg = $("import-msg");
+  const r = await fetch("/api/admin/import", {
+    method: "POST", headers: { "Content-Type": "text/csv" }, body: await file.text(),
+  });
+  const res = await r.json();
+  msg.className = r.ok ? "msg" : "msg err";
+  msg.textContent = r.ok
+    ? `${res.added} ligne${res.added > 1 ? "s" : ""} importée${res.added > 1 ? "s" : ""}, ${res.skipped} ignorée${res.skipped > 1 ? "s" : ""} (uuid déjà présent).`
+    : [res.error, ...(res.details || [])].join(" ");
+  if (r.ok) load();
 });
 
 load();

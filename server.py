@@ -8,12 +8,15 @@ Variables d'environnement :
   HOST, PORT      adresse d'écoute (défaut : 127.0.0.1:8000)
 """
 import base64
+import csv
 import hmac
+import io
 import json
 import os
 import re
 import sqlite3
 import uuid
+from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -23,6 +26,7 @@ ADMIN_USER = os.environ.get("ADMIN_USER", "")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 UUID_RE = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
 MAX_SCORE = 1000
+CSV_COLUMNS = ("uuid", "name", "privilege", "income")
 
 
 def db():
@@ -54,6 +58,47 @@ def valid_score(v):
     return isinstance(v, int) and not isinstance(v, bool) and -MAX_SCORE <= v <= MAX_SCORE
 
 
+def parse_csv(text):
+    """Lit un CSV (séparateur , ou ;) avec les colonnes CSV_COLUMNS.
+
+    Renvoie (lignes valides, erreurs). Les scores vides restent NULL.
+    """
+    delimiter = ";" if text.split("\n", 1)[0].count(";") > text.split("\n", 1)[0].count(",") else ","
+    reader = csv.DictReader(io.StringIO(text), delimiter=delimiter)
+    missing = set(CSV_COLUMNS) - set(reader.fieldnames or [])
+    if missing:
+        return [], [f"Colonnes manquantes : {', '.join(sorted(missing))}."]
+    rows, errors, seen = [], [], set()
+    for n, r in enumerate(reader, start=2):
+        pid = (r["uuid"] or "").strip().lower()
+        name = (r["name"] or "").strip()
+        if not re.fullmatch(UUID_RE, pid):
+            errors.append(f"Ligne {n} : uuid invalide.")
+            continue
+        if pid in seen:
+            errors.append(f"Ligne {n} : uuid en double dans le fichier.")
+            continue
+        seen.add(pid)
+        if not name or len(name) > 200:
+            errors.append(f"Ligne {n} : nom vide ou trop long.")
+            continue
+        scores = []
+        for col in ("privilege", "income"):
+            v = (r[col] or "").strip()
+            try:
+                scores.append(None if v == "" else int(v))
+            except ValueError:
+                scores.append("x")
+        if any(s is not None and not valid_score(s) for s in scores):
+            errors.append(f"Ligne {n} : score invalide.")
+            continue
+        if (scores[0] is None) != (scores[1] is None):
+            errors.append(f"Ligne {n} : les deux scores doivent être remplis, ou aucun.")
+            continue
+        rows.append((pid, name, *scores))
+    return rows, errors
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "thunometre"
 
@@ -78,12 +123,18 @@ class Handler(BaseHTTPRequestHandler):
     def page(self, name):
         self.send(200, (ROOT / "static" / name).read_bytes(), "text/html")
 
-    def json_body(self):
+    def raw_body(self, limit):
         try:
             length = int(self.headers.get("Content-Length", 0))
-            if length > 10_000:
-                return None
-            return json.loads(self.rfile.read(length) or b"null")
+        except ValueError:
+            return None
+        if not 0 <= length <= limit:
+            return None
+        return self.rfile.read(length)
+
+    def json_body(self):
+        try:
+            return json.loads(self.raw_body(10_000) or b"null")
         except (ValueError, json.JSONDecodeError):
             return None
 
@@ -177,6 +228,47 @@ class Handler(BaseHTTPRequestHandler):
             conn.execute("DELETE FROM points WHERE uuid=?", (pid,))
         self.send(204)
 
+    def admin_export(self):
+        if not self.require_admin():
+            return
+        with db() as conn:
+            rows = conn.execute(
+                "SELECT uuid, name, privilege, income FROM points ORDER BY name"
+            ).fetchall()
+        out = io.StringIO()
+        writer = csv.writer(out)
+        writer.writerow(CSV_COLUMNS)
+        writer.writerows(tuple(r) for r in rows)
+        filename = f"thunometre-{datetime.now():%d-%m-%Y}.csv"
+        # BOM UTF-8 pour qu'Excel affiche correctement les accents.
+        self.send(200, "﻿" + out.getvalue(), "text/csv",
+                  {"Content-Disposition": f'attachment; filename="{filename}"'})
+
+    def admin_import(self):
+        if not self.require_admin():
+            return
+        # Exiger text/csv force un preflight CORS : un autre site ne peut pas
+        # déclencher un import avec les identifiants mis en cache du navigateur.
+        if self.headers.get("Content-Type", "").split(";")[0].strip() != "text/csv":
+            return self.send(415, {"error": "Content-Type text/csv attendu."})
+        raw = self.raw_body(5_000_000)
+        if raw is None:
+            return self.send(413, {"error": "Fichier trop gros (5 Mo max)."})
+        try:
+            text = raw.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            return self.send(400, {"error": "Le fichier doit être encodé en UTF-8."})
+        rows, errors = parse_csv(text)
+        if errors:
+            return self.send(400, {"error": "Import annulé, rien n'a été modifié.", "details": errors[:20]})
+        with db() as conn:
+            before = conn.total_changes
+            conn.executemany(
+                "INSERT OR IGNORE INTO points (uuid, name, privilege, income) VALUES (?, ?, ?, ?)", rows
+            )
+            added = conn.total_changes - before
+        self.send(200, {"added": added, "skipped": len(rows) - added})
+
     # --- API client --------------------------------------------------------
     def client_get(self, pid):
         with db() as conn:
@@ -216,6 +308,8 @@ ROUTES = [
     ("GET", r"/api/admin/points", Handler.admin_list),
     ("POST", r"/api/admin/points", Handler.admin_create),
     ("DELETE", rf"/api/admin/points/({UUID_RE})", Handler.admin_delete),
+    ("GET", r"/api/admin/export\.csv", Handler.admin_export),
+    ("POST", r"/api/admin/import", Handler.admin_import),
     ("GET", rf"/api/p/({UUID_RE})", Handler.client_get),
     ("PUT", rf"/api/p/({UUID_RE})", Handler.client_put),
 ]

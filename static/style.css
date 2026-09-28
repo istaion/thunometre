@@ -127,3 +127,12 @@ form.calc .rule { color: var(--ink-3); font-size: .8125rem; margin: 6px 0 0; }
   border-top: 1px solid var(--line); padding-top: 12px;
 }
 .calc-total strong { font-size: 1.25rem; font-variant-numeric: tabular-nums; }
+
+/* Données */
+.row-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.button {
+  display: inline-block; cursor: pointer; border-radius: 8px; padding: 9px 16px;
+  background: var(--ink); color: var(--bg); text-decoration: none; font-size: 1rem;
+}
+.button.secondary { background: none; color: var(--ink); border: 1px solid var(--line); flex-direction: row; }
+code { font-size: .8125rem; }

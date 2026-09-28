@@ -7,7 +7,10 @@ rapport aux autres personnes.
 - **Admin** (`/admin`, protégé par identifiant et mot de passe) : saisit un nom
   libre (mail, prénom, numéro + date…), ce qui crée un lien personnel `/p/<uuid>`
   à envoyer. Voit le nuage avec le nom de chaque point au survol, et la liste des
-  personnes (copier le lien, supprimer).
+  personnes (copier le lien, supprimer). Export CSV (`thunometre-JJ-MM-AAAA.csv`)
+  et import CSV (colonnes `uuid, name, privilege, income`, séparateur `,` ou `;`) :
+  un uuid déjà présent n'est jamais écrasé, et un fichier contenant une ligne
+  invalide est refusé en entier.
 - **Client** (`/p/<uuid>`) : saisit ou modifie ses deux scores, et voit le nuage
   avec son point en couleur. Les autres points sont anonymes. Deux calculateurs
   (privilège, capacités financières) aident à obtenir les scores ; ils tournent
