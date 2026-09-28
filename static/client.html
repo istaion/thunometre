@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Thunomètre</title>
+<link rel="stylesheet" href="/static/style.css">
+<script src="/static/chart.js"></script>
+</head>
+<body>
+<main>
+  <h1>Thunomètre</h1>
+  <p class="sub">Saisissez vos deux scores (de 0 à 100) pour voir où vous vous situez par rapport aux autres personnes. Les autres points sont anonymes.</p>
+
+  <div class="card">
+    <form class="row" id="form">
+      <label>Score de revenus <input type="number" id="income" min="0" max="100" step="1" required></label>
+      <label>Score de privilège <input type="number" id="privilege" min="0" max="100" step="1" required></label>
+      <button type="submit" id="submit">Enregistrer</button>
+    </form>
+    <p class="msg" id="msg"></p>
+  </div>
+
+  <h2>Le nuage</h2>
+  <div class="card">
+    <div id="chart"></div>
+    <div class="legend"><span class="me">Vous</span><span>Les autres</span></div>
+  </div>
+</main>
+<script>
+const id = location.pathname.split("/").pop();
+const $ = s => document.getElementById(s);
+let data;
+
+function render() {
+  const pts = data.others.map(o => ({ x: o.income, y: o.privilege }));
+  if (data.me.income != null) pts.push({ x: data.me.income, y: data.me.privilege, me: true, label: "Vous" });
+  drawScatter($("chart"), pts);
+}
+
+async function load() {
+  const r = await fetch("/api/p/" + id);
+  if (!r.ok) { $("msg").textContent = "Lien invalide."; $("msg").className = "msg err"; return; }
+  data = await r.json();
+  if (data.me.income != null) {
+    $("income").value = data.me.income;
+    $("privilege").value = data.me.privilege;
+    $("submit").textContent = "Modifier";
+  }
+  render();
+}
+
+$("form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const body = { income: +$("income").value, privilege: +$("privilege").value };
+  const r = await fetch("/api/p/" + id, {
+    method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+  });
+  const res = await r.json();
+  if (!r.ok) { $("msg").textContent = res.error; $("msg").className = "msg err"; return; }
+  data.me = res;
+  $("msg").textContent = "Enregistré.";
+  $("msg").className = "msg";
+  $("submit").textContent = "Modifier";
+  render();
+});
+
+load();
+</script>
+</body>
+</html>
