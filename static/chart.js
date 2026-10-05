@@ -1,5 +1,5 @@
 // Nuage de points SVG minimal. points : [{x, y, label, me}],
-// x = capacités financières, y = privilège (entiers, éventuellement négatifs).
+// x = thune (capacités financières), y = privilèges (entiers, éventuellement négatifs).
 // onHover(point|null) est optionnel.
 
 // Pas « rond » (1, 2, 5, 10, 20…) pour environ 4 à 6 graduations.
@@ -33,7 +33,7 @@ function drawScatter(container, points, onHover) {
   container.innerHTML = "";
   container.classList.add("chart");
   const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, role: "img",
-    "aria-label": "Nuage de points capacités financières / privilège" }, container);
+    "aria-label": "Nuage de points thune / privilèges" }, container);
   const tip = document.createElement("div");
   tip.className = "tip";
   container.appendChild(tip);
@@ -47,9 +47,9 @@ function drawScatter(container, points, onHover) {
     el("text", { class: "tick", x: M.l - 8, y: sy(v) + 4, "text-anchor": "end" }, svg).textContent = v;
   }
   el("text", { class: "axis-label", x: M.l + iw / 2, y: H - 6, "text-anchor": "middle" }, svg).textContent =
-    "Capacités financières →";
+    "Thune →";
   el("text", { class: "axis-label", x: 12, y: M.t + ih / 2, "text-anchor": "middle",
-    transform: `rotate(-90 12 ${M.t + ih / 2})` }, svg).textContent = "Privilège →";
+    transform: `rotate(-90 12 ${M.t + ih / 2})` }, svg).textContent = "Privilèges →";
 
   // « moi » dessiné en dernier pour rester au-dessus
   const sorted = [...points].sort((a, b) => (a.me ? 1 : 0) - (b.me ? 1 : 0));
@@ -61,7 +61,7 @@ function drawScatter(container, points, onHover) {
     const hit = el("circle", { class: "hit", cx, cy, r: 14 }, hits);
     const show = () => {
       const k = svg.getBoundingClientRect().width / W;
-      tip.textContent = (p.label ? p.label + " · " : "") + `finances ${p.x}, privilège ${p.y}`;
+      tip.textContent = (p.label ? p.label + " · " : "") + `thune ${p.x}, privilèges ${p.y}`;
       tip.style.left = cx * k + "px";
       tip.style.top = cy * k + "px";
       tip.style.display = "block";

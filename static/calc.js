@@ -33,8 +33,8 @@ const PRIVILEGE_QUESTIONS = [
 const FINANCE_AMOUNTS = [
   {
     id: "revenu", label: "Combien gagnes-tu environ par mois ?", unit: "€ / mois",
-    rule: "−1 si moins de 700 € ; 0 de 700 à 1 499 € ; +1 à partir de 1 500 €, puis +1 par tranche de 500 € en plus.",
-    points: v => (v < 700 ? -1 : v < 1500 ? 0 : 1 + Math.floor((v - 1500) / 500)),
+    rule: "−1 si moins de 800 € ; 0 de 800 à 1 499 € ; +1 à partir de 1 500 €, puis +1 par tranche de 500 € en plus.",
+    points: v => (v < 800 ? -1 : v < 1500 ? 0 : 1 + Math.floor((v - 1500) / 500)),
   },
   {
     id: "epargne", label: "Combien as-tu d'épargne ?", unit: "€",
@@ -103,7 +103,7 @@ function buildPrivilegeCalc(container, onUse) {
   container.append(
     h("p", { class: "muted" }, "Pour chaque ligne, choisis ce qui te correspond : +1, 0 ou −1. Le score est la somme."),
     form,
-    h("div", { class: "calc-total" }, h("span", {}, "Score de privilège : ", total, status), use));
+    h("div", { class: "calc-total" }, h("span", {}, "Score « privilèges » : ", total, status), use));
 }
 
 function buildFinanceCalc(container, onUse) {
@@ -148,7 +148,6 @@ function buildFinanceCalc(container, onUse) {
   update();
 
   container.append(
-    h("p", { class: "muted" }, "Montants approximatifs. Le détail des points s'affiche à côté de chaque réponse."),
     form,
-    h("div", { class: "calc-total" }, h("span", {}, "Score de capacités financières : ", total), use));
+    h("div", { class: "calc-total" }, h("span", {}, "Score « thune » : ", total), use));
 }

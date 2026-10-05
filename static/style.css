@@ -136,3 +136,10 @@ form.calc .rule { color: var(--ink-3); font-size: .8125rem; margin: 6px 0 0; }
 }
 .button.secondary { background: none; color: var(--ink); border: 1px solid var(--line); flex-direction: row; }
 code { font-size: .8125rem; }
+
+/* Textes explicatifs (page client) */
+.prose { color: var(--ink); margin-bottom: 16px; }
+.prose p { margin: 0 0 10px; }
+.prose ul { margin: 0 0 10px; padding-left: 1.25em; }
+.prose li { margin-bottom: 4px; }
+.prose a { color: var(--accent); }

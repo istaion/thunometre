@@ -12,32 +12,91 @@
 <body>
 <main>
   <h1>Thunomètre</h1>
-  <p class="sub">Indique tes deux scores pour voir où tu te situes par rapport aux autres personnes. Les autres points sont anonymes.</p>
+  <div class="prose">
+    <p>Utiliser le prix libre comme modèle de rémunération pour des séances de psychothérapie
+    implique, pour chacun·e, de se questionner sur ses possibilités financières. L'exercice n'est
+    pas toujours simple et il est influencé par des biais de perception selon notre situation.</p>
+    <p>L'objectif de cet outil est :</p>
+    <ul>
+      <li>de faciliter l'introspection sur ta situation, au travers de questions sur ta situation
+      financière et sur les notions de privilèges et d'oppressions ;</li>
+      <li>de te situer par rapport aux autres personnes accompagnées actuellement par Marina, et
+      d'ajuster ton prix libre si tu le souhaites.</li>
+    </ul>
+    <p>Les résultats sont confidentiels et ta participation est soumise à ton consentement. Les
+    autres personnes ne voient que des points anonymes ; seule Marina sait à qui correspond chaque
+    point. Tes réponses aux questions ne quittent pas ton navigateur et ne sont jamais
+    enregistrées : seuls tes deux scores le sont, quand tu cliques sur « Enregistrer ».</p>
+    <p>Pas d'obligation : tu peux t'arrêter quand tu veux. Marina reste disponible pour tout
+    échange ou question. L'outil est en perpétuelle évolution : toute remarque, tout commentaire,
+    toute idée est la bienvenue.</p>
+  </div>
 
+  <h2>Consignes</h2>
+  <div class="prose">
+    <p>Tu vas calculer 2 scores pour que ta situation apparaisse sur un graphique à double entrée :</p>
+    <ul>
+      <li><strong>la thune</strong> : une liste de questions te donne un score (négatif ou positif)
+      qui reflète ta situation financière ;</li>
+      <li><strong>les privilèges</strong> : une roue à 18 thèmes te donne un score de −18 à +18.</li>
+    </ul>
+  </div>
+
+  <h2>1. Calcul du score « thune »</h2>
+  <div class="prose">
+    <p>Réponds aux questions ci-dessous : les points s'affichent à côté de chaque réponse, avec la
+    règle de calcul. Les montants peuvent être approximatifs.</p>
+    <p class="muted">Sources : inspiré des pratiques en autogestion de divers évènements militants.</p>
+  </div>
+  <details class="card">
+    <summary>Calculer mon score « thune »</summary>
+    <div id="calc-finance"></div>
+  </details>
+
+  <h2>2. Calcul du score « privilèges »</h2>
+  <div class="prose">
+    <p>Il y a 18 critères sur la
+    <a href="https://praxis.encommun.io/n/XHNqwZTrl9FgCMqFdUiN0JaaYVs/" target="_blank" rel="noopener noreferrer">roue des privilèges</a>
+    (liste non exhaustive et en perpétuelle évolution), chacun séparé en 3 niveaux selon le degré
+    d'oppression ou de privilège. Par exemple, si tu es propriétaire, tu as un privilège (+1 à ton
+    score) que les personnes sans logement ou en squat n'ont pas (−1 à leur score).</p>
+    <p>Pour chaque critère, situe-toi sur l'un des trois niveaux ; le score est la somme, entre −18
+    et +18.</p>
+  </div>
+  <details class="card">
+    <summary>Calculer mon score « privilèges »</summary>
+    <div id="calc-privilege"></div>
+  </details>
+
+  <h2>3. Enregistre tes scores</h2>
   <div class="card" id="scores">
     <form class="row" id="form">
-      <label>Capacités financières <input type="number" id="income" step="1" required></label>
-      <label>Privilège <input type="number" id="privilege" step="1" required></label>
+      <label>Thune <input type="number" id="income" step="1" required></label>
+      <label>Privilèges <input type="number" id="privilege" step="1" required></label>
       <button type="submit" id="submit">Enregistrer</button>
     </form>
     <p class="msg" id="msg"></p>
   </div>
 
-  <h2>Calculer mes scores</h2>
-  <p class="muted">Tes réponses ne quittent pas ton navigateur et ne sont jamais enregistrées. Seuls les deux scores le sont, quand tu cliques sur « Enregistrer ».</p>
-  <details class="card">
-    <summary>Score de privilège</summary>
-    <div id="calc-privilege"></div>
-  </details>
-  <details class="card">
-    <summary>Score de capacités financières</summary>
-    <div id="calc-finance"></div>
-  </details>
-
-  <h2>Le nuage</h2>
+  <h2>4. Observe ta place dans le graphique</h2>
+  <div class="prose">
+    <p>Ajuste ta contribution si tu le souhaites. Par exemple, si tu constates que tes scores de
+    thune et de privilèges sont plus bas que ceux des autres, tu peux t'autoriser à donner moins
+    dans le prix libre : ça s'équilibre avec les contributions des autres personnes.</p>
+  </div>
   <div class="card">
     <div id="chart"></div>
     <div class="legend"><span class="me">Toi</span><span>Les autres</span></div>
+  </div>
+
+  <h2>Pour rappel</h2>
+  <div class="prose">
+    <p>Tu n'es obligé·e à rien : si le montant que tu as fixé te convient, il n'a pas à évoluer. Cet
+    exercice est une invitation, pas une obligation.</p>
+    <p>Marina ne se sacrifie pas avec ce modèle : ce choix est réfléchi, en accord avec ses valeurs
+    et l'auto-évaluation de ses besoins.</p>
+    <p>Garde bien ton lien personnel : il te permet de revenir voir le graphique, qui s'enrichira au
+    fil des réponses, et de modifier tes scores quand tu veux.</p>
   </div>
 </main>
 <script>
