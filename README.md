@@ -42,6 +42,24 @@ Le fichier `render.yaml` décrit le service (Blueprint). Dans Render :
 - Render fournit le HTTPS, indispensable ici (authentification HTTP Basic, liens
   clients qui valent mot de passe).
 
+## Déploiement sur PythonAnywhere (gratuit)
+
+`wsgi.py` expose l'application au format WSGI. Dans l'onglet **Web**, après
+« Add a new web app → Manual configuration », remplacer le contenu du fichier
+WSGI par :
+
+```python
+import os, sys
+os.environ["ADMIN_USER"] = "…"
+os.environ["ADMIN_PASSWORD"] = "…"
+sys.path.insert(0, "/home/<pseudo>/thunometre")
+from wsgi import application
+```
+
+Activer **Force HTTPS**, puis **Reload**. Mise à jour : `git pull` dans une
+console, puis **Reload**. Compte gratuit : cliquer sur « Run until 3 months from
+today » au moins tous les 3 mois.
+
 ## Autre hébergement
 
 Mettre le serveur derrière un reverse proxy HTTPS (Caddy, nginx). Exemple Caddy :

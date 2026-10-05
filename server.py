@@ -15,6 +15,8 @@ import json
 import os
 import re
 import sqlite3
+import threading
+import time
 import uuid
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -27,6 +29,13 @@ ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 UUID_RE = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
 MAX_SCORE = 1000
 CSV_COLUMNS = ("uuid", "name", "privilege", "income")
+
+# Limitation des essais de mot de passe admin, sur une fenêtre glissante.
+# Par IP, et globalement en filet de sécurité (l'IP vue derrière un proxy
+# n'est pas totalement fiable).
+LOGIN_WINDOW = 15 * 60
+MAX_FAILS_PER_IP = 5
+MAX_FAILS_GLOBAL = 50
 
 
 def db():
@@ -52,6 +61,35 @@ def init_db():
         if "email" in cols:
             conn.execute("INSERT INTO points SELECT uuid, email, privilege, income FROM points_old")
             conn.execute("DROP TABLE points_old")
+
+
+class LoginLimiter:
+    def __init__(self):
+        self.fails = {}  # ip -> [horodatages des échecs]
+        self.lock = threading.Lock()
+
+    def _prune(self, now):
+        for ip in list(self.fails):
+            self.fails[ip] = [t for t in self.fails[ip] if now - t < LOGIN_WINDOW]
+            if not self.fails[ip]:
+                del self.fails[ip]
+
+    def blocked(self, ip):
+        with self.lock:
+            self._prune(time.monotonic())
+            total = sum(len(v) for v in self.fails.values())
+            return len(self.fails.get(ip, [])) >= MAX_FAILS_PER_IP or total >= MAX_FAILS_GLOBAL
+
+    def failure(self, ip):
+        with self.lock:
+            self.fails.setdefault(ip, []).append(time.monotonic())
+
+    def success(self, ip):
+        with self.lock:
+            self.fails.pop(ip, None)
+
+
+login_limiter = LoginLimiter()
 
 
 def valid_score(v):
@@ -108,17 +146,23 @@ class Handler(BaseHTTPRequestHandler):
             body = json.dumps(body).encode()
         elif isinstance(body, str):
             body = body.encode()
+        headers = {
+            "Content-Type": ctype + "; charset=utf-8",
+            "Content-Length": str(len(body)),
+            "Cache-Control": "no-store",
+            "Referrer-Policy": "no-referrer",
+            "X-Content-Type-Options": "nosniff",
+            **(headers or {}),
+        }
+        self.respond(status, headers, b"" if self.command == "HEAD" else body)
+
+    def respond(self, status, headers, body):
+        # Point de sortie unique, remplacé par l'adaptateur WSGI (wsgi.py).
         self.send_response(status)
-        self.send_header("Content-Type", ctype + "; charset=utf-8")
-        self.send_header("Content-Length", str(len(body)))
-        headers = {"Cache-Control": "no-store", **(headers or {})}
-        self.send_header("Referrer-Policy", "no-referrer")
-        self.send_header("X-Content-Type-Options", "nosniff")
         for k, v in headers.items():
             self.send_header(k, v)
         self.end_headers()
-        if self.command != "HEAD":
-            self.wfile.write(body)
+        self.wfile.write(body)
 
     def page(self, name):
         self.send(200, (ROOT / "static" / name).read_bytes(), "text/html")
@@ -150,9 +194,26 @@ class Handler(BaseHTTPRequestHandler):
         pwd_ok = hmac.compare_digest(pwd.encode(), ADMIN_PASSWORD.encode())
         return user_ok and pwd_ok
 
+    def client_ip(self):
+        # Derrière un proxy (Render, PythonAnywhere, Caddy), la dernière entrée
+        # de X-Forwarded-For est celle ajoutée par le proxy.
+        forwarded = self.headers.get("X-Forwarded-For", "")
+        if forwarded:
+            return forwarded.split(",")[-1].strip()
+        return self.client_address[0]
+
     def require_admin(self):
+        ip = self.client_ip()
+        if login_limiter.blocked(ip):
+            minutes = LOGIN_WINDOW // 60
+            self.send(429, f"Trop de tentatives. Réessaie dans {minutes} minutes.", "text/plain",
+                      {"Retry-After": str(LOGIN_WINDOW)})
+            return False
         if self.is_admin():
+            login_limiter.success(ip)
             return True
+        if self.headers.get("Authorization"):
+            login_limiter.failure(ip)
         self.send(401, {"error": "auth"}, headers={"WWW-Authenticate": 'Basic realm="thunometre"'})
         return False
 
