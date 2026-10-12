@@ -40,7 +40,7 @@
         <input type="file" id="import" accept=".csv,text/csv" hidden>
       </label>
     </div>
-    <p class="muted">Colonnes : <code>uuid, name, privilege, income</code>. À l'import, les lignes dont l'uuid existe déjà sont ignorées (rien n'est écrasé). Si une ligne est invalide, rien n'est importé.</p>
+    <p class="muted">Colonnes : <code>uuid, name, privilege, income</code> (seule <code>name</code> est obligatoire). À l'import, les lignes dont l'uuid existe déjà sont ignorées (rien n'est écrasé). Sans colonne <code>uuid</code>, chaque ligne crée une nouvelle personne : n'importe un tel fichier qu'une fois. Si une ligne est invalide, rien n'est importé.</p>
     <p class="msg" id="import-msg"></p>
   </div>
 </main>

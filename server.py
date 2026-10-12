@@ -4,6 +4,7 @@
 Variables d'environnement :
   ADMIN_USER      identifiant de la page /admin (obligatoire)
   ADMIN_PASSWORD  mot de passe de la page /admin (obligatoire)
+  PSY_NAME        nom de la psy affiché aux clients (défaut : « ta psy »)
   DB_PATH         chemin de la base SQLite (défaut : thunometre.db)
   HOST, PORT      adresse d'écoute (défaut : 127.0.0.1:8000)
 """
@@ -19,6 +20,7 @@ import threading
 import time
 import uuid
 from datetime import datetime
+from html import escape
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -26,6 +28,8 @@ ROOT = Path(__file__).parent
 DB_PATH = os.environ.get("DB_PATH", str(ROOT / "thunometre.db"))
 ADMIN_USER = os.environ.get("ADMIN_USER", "")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
+# Nom de la psy affiché sur la page client ({{psy}} / {{Psy}} dans le HTML).
+PSY_NAME = os.environ.get("PSY_NAME", "ta psy")
 UUID_RE = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
 MAX_SCORE = 1000
 CSV_COLUMNS = ("uuid", "name", "privilege", "income")
@@ -99,17 +103,20 @@ def valid_score(v):
 def parse_csv(text):
     """Lit un CSV (séparateur , ou ;) avec les colonnes CSV_COLUMNS.
 
-    Renvoie (lignes valides, erreurs). Les scores vides restent NULL.
+    Seule la colonne name est obligatoire. Sans colonne uuid, chaque ligne
+    reçoit un nouvel uuid (premier import de données existantes). Renvoie
+    (lignes valides, erreurs). Les scores vides ou absents restent NULL.
     """
     delimiter = ";" if text.split("\n", 1)[0].count(";") > text.split("\n", 1)[0].count(",") else ","
     reader = csv.DictReader(io.StringIO(text), delimiter=delimiter)
-    missing = set(CSV_COLUMNS) - set(reader.fieldnames or [])
-    if missing:
-        return [], [f"Colonnes manquantes : {', '.join(sorted(missing))}."]
+    reader.fieldnames = [f.strip().lower() for f in reader.fieldnames or []]
+    if "name" not in reader.fieldnames:
+        return [], ["Colonne manquante : name."]
+    has_uuid = "uuid" in reader.fieldnames
     rows, errors, seen = [], [], set()
     for n, r in enumerate(reader, start=2):
-        pid = (r["uuid"] or "").strip().lower()
-        name = (r["name"] or "").strip()
+        pid = (r.get("uuid") or "").strip().lower() if has_uuid else str(uuid.uuid4())
+        name = (r.get("name") or "").strip()
         if not re.fullmatch(UUID_RE, pid):
             errors.append(f"Ligne {n} : uuid invalide.")
             continue
@@ -122,7 +129,7 @@ def parse_csv(text):
             continue
         scores = []
         for col in ("privilege", "income"):
-            v = (r[col] or "").strip()
+            v = (r.get(col) or "").strip()
             try:
                 scores.append(None if v == "" else int(v))
             except ValueError:
@@ -165,7 +172,10 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def page(self, name):
-        self.send(200, (ROOT / "static" / name).read_bytes(), "text/html")
+        html = (ROOT / "static" / name).read_text()
+        psy = escape(PSY_NAME)
+        html = html.replace("{{psy}}", psy).replace("{{Psy}}", psy[:1].upper() + psy[1:])
+        self.send(200, html, "text/html")
 
     def raw_body(self, limit):
         try:

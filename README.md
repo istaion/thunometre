@@ -9,7 +9,8 @@ rapport aux autres personnes.
   à envoyer. Voit le nuage avec le nom de chaque point au survol, et la liste des
   personnes (copier le lien, supprimer). Export CSV (`thunometre-JJ-MM-AAAA.csv`)
   et import CSV (colonnes `uuid, name, privilege, income`, séparateur `,` ou `;`) :
-  un uuid déjà présent n'est jamais écrasé, et un fichier contenant une ligne
+  sans colonne `uuid`, chaque ligne crée une nouvelle personne ; un uuid déjà
+  présent n'est jamais écrasé, et un fichier contenant une ligne
   invalide est refusé en entier.
 - **Client** (`/p/<uuid>`) : saisit ou modifie ses deux scores, et voit le nuage
   avec son point en couleur. Les autres points sont anonymes. Deux calculateurs
@@ -23,10 +24,11 @@ Aucune dépendance : Python 3 (bibliothèque standard) + SQLite. Une seule table
 ## Lancer
 
 ```sh
-ADMIN_USER='marine' ADMIN_PASSWORD='un-mot-de-passe' python3 server.py
+ADMIN_USER='admin' ADMIN_PASSWORD='un-mot-de-passe' PSY_NAME='Prénom' python3 server.py
 ```
 
-Options : `PORT` (8000), `HOST` (127.0.0.1), `DB_PATH` (`thunometre.db`).
+Options : `PSY_NAME` (nom de la psy affiché aux clients, défaut « ta psy »),
+`PORT` (8000), `HOST` (127.0.0.1), `DB_PATH` (`thunometre.db`).
 
 L'admin se connecte sur `/admin` avec cet identifiant et ce mot de passe.
 
@@ -52,6 +54,7 @@ WSGI par :
 import os, sys
 os.environ["ADMIN_USER"] = "…"
 os.environ["ADMIN_PASSWORD"] = "…"
+os.environ["PSY_NAME"] = "…"
 sys.path.insert(0, "/home/<pseudo>/thunometre")
 from wsgi import application
 ```
