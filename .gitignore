@@ -219,3 +219,7 @@ __marimo__/
 
 # Base SQLite
 *.db
+
+#deploiement sur python anywere
+exemple.wsgi
+
